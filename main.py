@@ -11,11 +11,13 @@ import time
 import threading
 import tkinter as tk
 
-SCALE_BY = 32
-ALPHA = True
-THREAD_COUNT = 10    #how many threads to use
-ORIGINAL_SCALE = 0.8 #scale the image down to this size before converting to minecraft items
+SCALE_BY = 32        #scale the image up by this much
+ALPHA = True         #use alpha channel
+THREAD_COUNT = 20    #how many threads to use
+ORIGINAL_SCALE = 0.9 #scale the image down to this size before converting to minecraft items
 
+WHITELIST_BLOCK = ["wool","concrete","stained_glass","terracotta","ore","cobble","log","planks","grass_block_top","sand","obsidian","emerald","diamond","gold","iron","redstone_block","lapis","chiseled_quartz_bloc"]
+BLACKLIST_BLOCK= ["stripped","pane_top","_dust","camp","nether_quartz_ore","nether_gold_ore"]
 def pixel_to_int(p):
     if not isinstance(p, tuple):
         return p
@@ -48,17 +50,21 @@ except:
     for dir, subdir, files in os.walk('minecraft'):
         for file in files:
             if file.endswith('.png') and not file in minecraft:
-                minecraft.append(os.path.join(dir, file))
+                name = file.split('\\')[-1].lower().split('.png')[0]
+                if not any(x in name for x in BLACKLIST_BLOCK) and any(x in name for x in WHITELIST_BLOCK):
+                    minecraft.append(os.path.join(dir, file))
     ending = {}
     for i in range(len(minecraft)):
         im = Image.open(minecraft[i])
+        if im.size[0] != im.size[1]:
+            im = im.crop((0, 0, min(im.size), min(im.size)))
         im = im.resize((1, 1))
         color = pixel_to_int(im.getpixel((0, 0)))
         if not color in ending:
             ending[color] = []
         ending[color].append(minecraft[i])
     json.dump(ending, open('minecraft_item_color.json', 'w'))
-
+print(f"[+] loaded {len(ending)} minecraft blocs")
 #ask for an image, and then find the closest minecraft item for each pixel
 try:
     im = Image.open(input('Image: '))
