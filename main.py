@@ -15,8 +15,9 @@ SCALE_BY = 32        #scale the image up by this much
 ALPHA = True         #use alpha channel
 THREAD_COUNT = 20    #how many threads to use
 ORIGINAL_SCALE = 0.9 #scale the image down to this size before converting to minecraft items
+NO_SLEEP = True
 
-WHITELIST_BLOCK = ["wool","concrete","stained_glass","terracotta","ore","cobble","log","planks","grass_block_top","sand","obsidian","emerald","diamond","gold","iron","redstone_block","lapis","chiseled_quartz_bloc"]
+WHITELIST_BLOCK = ["wool","concrete","stained_glass","terracotta","ore","cobble","log","planks","grass_block_top","sand","obsidian","emerald","diamond","gold","iron","redstone_block","lapis","chiseled_quartz_bloc","cauldron","bedrock"]
 BLACKLIST_BLOCK= ["stripped","pane_top","_dust","camp","nether_quartz_ore","nether_gold_ore"]
 def pixel_to_int(p):
     if not isinstance(p, tuple):
@@ -115,7 +116,7 @@ for i in range(THREAD_COUNT):
     avg_progress[i].pack()
     t.daemon = True
     t.start()
-    time.sleep(0.1)
+    if not NO_SLEEP:time.sleep(0.1)
 #wait for all threads to finish
 print(f"[+] Started {THREAD_COUNT} threads")
 while threading.active_count() > 1:
@@ -125,7 +126,7 @@ while threading.active_count() > 1:
         avg_progress[i].config(text=f"Thread {i} tpp: {round(list(avg)[i],4)}s")
     progress.config(text=f"[*] {perc}% active: {threading.active_count()-1}")
     window.update()
-    time.sleep(0.1)
+    if not NO_SLEEP:time.sleep(0.1)
 #create the final image
 for i in range(len(final_pixel_data)):
     try:
@@ -135,5 +136,6 @@ for i in range(len(final_pixel_data)):
 window.destroy()
 print(f"[+] Finished in {round(time.time()-t1,2)}s")
 out_im.save('output.png')
+out_im.show()
 im.close()
 print(f"[+] Saved output.png")
