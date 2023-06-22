@@ -17,7 +17,7 @@ THREAD_COUNT = 20    #how many threads to use
 ORIGINAL_SCALE = 0.9 #scale the image down to this size before converting to minecraft items
 NO_SLEEP = True
 
-WHITELIST_BLOCK = ["wool","concrete","stained_glass","terracotta","ore","cobble","log","planks","grass_block_top","sand","obsidian","emerald","diamond","gold","iron","redstone_block","lapis","chiseled_quartz_bloc","cauldron","bedrock"]
+WHITELIST_BLOCK = ["wool","concrete","stained_glass","terracotta","ore","cobble","log","planks","grass_block_top","sand","coal_block","obsidian","emerald","diamond","gold","iron","redstone_block","lapis","chiseled_quartz_bloc","cauldron","bedrock","beacon","trapdoor"]
 BLACKLIST_BLOCK= ["stripped","pane_top","_dust","camp","nether_quartz_ore","nether_gold_ore"]
 def pixel_to_int(p):
     if not isinstance(p, tuple):
@@ -30,18 +30,28 @@ def int_to_pixel(i):
     alpha_p = (i // 256 ** 3) % 256
     return (i % 256, (i // 256) % 256, (i // 256 ** 2) % 256, alpha_p)
 
-def get_distance_between_pixels(p1, p2):
-    #get the distance between two pixels
-    return sum([abs(p1[i] - p2[i]) for i in range(len(p1))])
+def sqrt(x):
+    return x**(1/2)
 
-def get_nearest_color(pixel_a):
+def get_distance_between_pixels(p1, pxs:list):
+    #get the distance between two pixels
+    diffs = []
+    for icolor in pxs:
+        if not ALPHA:
+            cr,cg,cb = int_to_pixel(int(icolor))
+            diff = sqrt((cr-p1[0])**2+(cg-p1[1])**2+(cb-p1[2])**2)
+        else:
+            cr,cg,cb,ca = int_to_pixel(int(icolor))
+            diff = sqrt((cr-p1[0])**2+(cg-p1[1])**2+(cb-p1[2])**2+(ca-p1[3])**2)
+        diffs.append((diff,icolor))
+    return min(diffs)[1]
+
+
+def get_nearest_color(pixel:tuple):
     global ending
-    temp = {}
-    for i in ending:
-        temp[get_distance_between_pixels(int_to_pixel(pixel_a),int_to_pixel(int(i)))] = i
-    #find the minimum key and return the value
-    return temp[min(temp.keys())]
-        
+    px = int_to_pixel(pixel_to_int(pixel))#double conversion to avoid errors
+    return get_distance_between_pixels(px,list(ending.keys()))
+
 
 #load the minecraft item colors
 try:
@@ -82,7 +92,7 @@ final_pixel_data = [""]*len(pixeldata)
 
 def convert_pixel_to_nearest(pixel):
     global ending
-    nearest = ending[get_nearest_color(pixel_to_int(pixel))][0]
+    nearest = ending[get_nearest_color(pixel)][0]
     nearest = Image.open(nearest)
     nearest = nearest.resize((SCALE_BY,SCALE_BY))
     return nearest
