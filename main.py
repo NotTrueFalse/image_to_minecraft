@@ -13,22 +13,19 @@ import tkinter as tk
 
 SCALE_BY = 32        #scale the image up by this much
 ALPHA = True         #use alpha channel
-THREAD_COUNT = 20    #how many threads to use
+THREAD_COUNT = 10    #how many threads to use
 ORIGINAL_SCALE = 0.9 #scale the image down to this size before converting to minecraft items
-NO_SLEEP = True
+NO_SLEEP = False
 
 WHITELIST_BLOCK = ["wool","concrete","stained_glass","terracotta","ore","cobble","log","planks","grass_block_top","sand","coal_block","obsidian","emerald","diamond","gold","iron","redstone_block","lapis","chiseled_quartz_bloc","cauldron","bedrock","beacon","trapdoor"]
 BLACKLIST_BLOCK= ["stripped","pane_top","_dust","camp","nether_quartz_ore","nether_gold_ore"]
-def pixel_to_int(p):
-    if not isinstance(p, tuple):
-        return p
-    return sum([p[i] * 256 ** i for i in range(len(p))])
+def pixel_to_hex(pixel:tuple):
+    if not ALPHA:return '%02x%02x%02x' % pixel
+    else:return '%02x%02x%02x%02x' % pixel
     
-def int_to_pixel(i):
-    if not ALPHA:
-        return (i % 256, (i // 256) % 256, (i // 256 ** 2) % 256)
-    alpha_p = (i // 256 ** 3) % 256
-    return (i % 256, (i // 256) % 256, (i // 256 ** 2) % 256, alpha_p)
+def hex_to_pixel(hex:str):
+    lst = (0, 2, 4, 6) if ALPHA else (0, 2, 4)
+    return tuple(int(hex[i:i+2], 16) for i in lst)
 
 def sqrt(x):
     return x**(1/2)
@@ -38,10 +35,10 @@ def get_distance_between_pixels(p1, pxs:list):
     diffs = []
     for icolor in pxs:
         if not ALPHA:
-            cr,cg,cb = int_to_pixel(int(icolor))
+            cr,cg,cb = hex_to_pixel(icolor)
             diff = sqrt((cr-p1[0])**2+(cg-p1[1])**2+(cb-p1[2])**2)
         else:
-            cr,cg,cb,ca = int_to_pixel(int(icolor))
+            cr,cg,cb,ca = hex_to_pixel(icolor)
             diff = sqrt((cr-p1[0])**2+(cg-p1[1])**2+(cb-p1[2])**2+(ca-p1[3])**2)
         diffs.append((diff,icolor))
     return min(diffs)[1]
@@ -49,7 +46,7 @@ def get_distance_between_pixels(p1, pxs:list):
 
 def get_nearest_color(pixel:tuple):
     global ending
-    px = int_to_pixel(pixel_to_int(pixel))#double conversion to avoid errors
+    px = hex_to_pixel(pixel_to_hex(pixel))#double conversion to avoid errors
     return get_distance_between_pixels(px,list(ending.keys()))
 
 
@@ -70,7 +67,9 @@ except:
         if im.size[0] != im.size[1]:
             im = im.crop((0, 0, min(im.size), min(im.size)))
         im = im.resize((1, 1))
-        color = pixel_to_int(im.getpixel((0, 0)))
+        im = im.convert('RGBA'if ALPHA else 'RGB')
+        im = im.getdata()[0]
+        color = pixel_to_hex(im)
         if not color in ending:
             ending[color] = []
         ending[color].append(minecraft[i])
@@ -83,6 +82,7 @@ except:
     print('Invalid image')
     exit()
 im = im.resize((int(im.size[0]*ORIGINAL_SCALE),int(im.size[1]*ORIGINAL_SCALE)))
+im = im.convert('RGBA'if ALPHA else 'RGB')
 w_, h_ = im.size
 w_, h_ = w_ * SCALE_BY, h_ * SCALE_BY
 out_im = Image.new('RGBA', (w_,h_))
